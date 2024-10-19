@@ -2,89 +2,89 @@
 
 ### Enhancements
 
-* **Persist record id in dedicated LanceDB column, use it to delete previous content to prevent duplicates.**
+- **Persist record id in dedicated LanceDB column, use it to delete previous content to prevent duplicates.**
 
 ### Fixes
 
-* **Remove client.ping() from the Elasticsearch precheck.**
-* **Pinecone metadata fixes** - Fix CLI's --metadata-fields default. Always preserve record ID tracking metadata.
-* **Add check to prevent querying for more than pinecone limit when deleting records**
-* **Unregister Weaviate base classes** - Weaviate base classes shouldn't be registered as they are abstract and cannot be instantiated as a configuration
+- **Remove client.ping() from the Elasticsearch precheck.**
+- **Pinecone metadata fixes** - Fix CLI's --metadata-fields default. Always preserve record ID tracking metadata.
+- **Add check to prevent querying for more than pinecone limit when deleting records**
+- **Unregister Weaviate base classes** - Weaviate base classes shouldn't be registered as they are abstract and cannot be instantiated as a configuration
 
 ## 0.3.4
 
 ### Enhancements
 
-* **Add azure openai embedder**
-* **Add `collection_id` field to Couchbase `downloader_config`**
+- **Add azure openai embedder**
+- **Add `collection_id` field to Couchbase `downloader_config`**
 
 ## 0.3.3
 
 ### Enhancements
 
-* **Add `precheck` to Milvus connector**
+- **Add `precheck` to Milvus connector**
 
 ### Fixes
 
-* **Make AstraDB uploader truncate `text` and `text_as_html` content to max 8000 bytes**
-* **Add missing LanceDb extra**
-* **Weaviate cloud auth detection fixed**
+- **Make AstraDB uploader truncate `text` and `text_as_html` content to max 8000 bytes**
+- **Add missing LanceDb extra**
+- **Weaviate cloud auth detection fixed**
 
 ## 0.3.2
 
 ### Enhancements
 
-* **Persist record id in mongodb data, use it to delete previous content to prevent duplicates.**
-
+- **Persist record id in mongodb data, use it to delete previous content to prevent duplicates.**
 
 ### Fixes
 
-* **Remove forward slash from Google Drive relative path field**
-* **Create LanceDB test databases in unique remote locations to avoid conflicts** 
-* **Add weaviate to destination registry**
+- **Remove forward slash from Google Drive relative path field**
+- **Create LanceDB test databases in unique remote locations to avoid conflicts**
+- **Add weaviate to destination registry**
 
 ## 0.3.1
 
 ### Enhancements
 
-* **LanceDB V2 Destination Connector**
-* **Persist record id in milvus, use it to delete previous content to prevent duplicates.**
-* **Persist record id in weaviate metadata, use it to delete previous content to prevent duplicates.**
-* **Persist record id in sql metadata, use it to delete previous content to prevent duplicates.**
-* **Persist record id in elasticsearch/opensearch metadata, use it to delete previous content to prevent duplicates.**
+- **LanceDB V2 Destination Connector**
+- **Persist record id in milvus, use it to delete previous content to prevent duplicates.**
+- **Persist record id in weaviate metadata, use it to delete previous content to prevent duplicates.**
+- **Persist record id in sql metadata, use it to delete previous content to prevent duplicates.**
+- **Persist record id in elasticsearch/opensearch metadata, use it to delete previous content to prevent duplicates.**
 
 ### Fixes
 
-* **Make AstraDB precheck fail on non-existant collections**
-* **Respect Pinecone's metadata size limits** crop metadata sent to Pinecone's to fit inside its limits, to avoid error responses
-* **Propagate exceptions raised by delta table connector during write**
+- **Make AstraDB precheck fail on non-existant collections**
+- **Respect Pinecone's metadata size limits** crop metadata sent to Pinecone's to fit inside its limits, to avoid error responses
+- **Propagate exceptions raised by delta table connector during write**
 
 ## 0.3.0
 
 ### Enhancements
 
-* **Added V2 kafka destination connector**
-* **Persist record id in pinecone metadata, use it to delete previous content to prevent duplicates.**
-* **Persist record id in azure ai search, use it to delete previous content to prevent duplicates.**
-* **Persist record id in astradb, use it to delete previous content to prevent duplicates.**
-* **Update Azure Cognitive Search to Azure AI Search**
+- **Added V2 kafka destination connector**
+- **Persist record id in pinecone metadata, use it to delete previous content to prevent duplicates.**
+- **Persist record id in azure ai search, use it to delete previous content to prevent duplicates.**
+- **Persist record id in astradb, use it to delete previous content to prevent duplicates.**
+- **Update Azure Cognitive Search to Azure AI Search**
 
 ### Fixes
 
-* **Fix Delta Table destination precheck** Validate AWS Region in precheck. 
-* **Add missing batch label to FileData where applicable** 
-* **Handle fsspec download file into directory** When filenames have odd characters, files are downloaded into a directory. Code added to shift it around to match expected behavior.
-* **Postgres Connector Query** causing syntax error when ID column contains strings
+- **Fix Delta Table destination precheck** Validate AWS Region in precheck.
+- **Add missing batch label to FileData where applicable**
+- **Handle fsspec download file into directory** When filenames have odd characters, files are downloaded into a directory. Code added to shift it around to match expected behavior.
+- **Postgres Connector Query** causing syntax error when ID column contains strings
 
 ## 0.2.2
 
 ### Enhancements
-* **Remove `overwrite` field** from fsspec and databricks connectors
-* **Added migration for GitLab Source V2**
-* **Added V2 confluence source connector**
-* **Added OneDrive destination connector**
-* **Qdrant destination to v2**
-* **Migrate Kafka Source Connector to V2**
+
+- **Remove `overwrite` field** from fsspec and databricks connectors
+- **Added migration for GitLab Source V2**
+- **Added V2 confluence source connector**
+- **Added OneDrive destination connector**
+- **Qdrant destination to v2**
+- **Migrate Kafka Source Connector to V2**
 
 ## 0.2.1
 
@@ -96,11 +96,10 @@
 - **Support native async requests from unstructured-client**
 - **Support filtering element types in partitioner step**
 
-
 ### Fixes
 
-* **Fix Databricks Volumes file naming** Add .json to end of upload file.
-* **Fix SQL Type destination precheck** Change to context manager "with".
+- **Fix Databricks Volumes file naming** Add .json to end of upload file.
+- **Fix SQL Type destination precheck** Change to context manager "with".
 
 ## 0.2.0
 
@@ -172,7 +171,7 @@
 
 - **Leverage `uv` for pip compile**
 
-* **Use incoming fsspec data to populate metadata** Rather than make additional calls to collect metadata after initial file list, use connector-specific data to populate the metadata. 
+- **Use incoming fsspec data to populate metadata** Rather than make additional calls to collect metadata after initial file list, use connector-specific data to populate the metadata.
 
 - **Drop langchain as dependency for embedders**
 
@@ -278,8 +277,7 @@
 ### Fixes
 
 **Fix uncompress logic** Use of the uncompress process wasn't being leveraged in the pipeline correctly. Updated to use the new loca download path for where the partitioned looks for the new file.
-**Fix uncompress logic** Use of the uncompress process wasn't being leveraged in the pipeline correctly. Updated to use the new loca download path for where the partitioned looks for the new file.  
-
+**Fix uncompress logic** Use of the uncompress process wasn't being leveraged in the pipeline correctly. Updated to use the new loca download path for where the partitioned looks for the new file.
 
 ## 0.0.8
 
