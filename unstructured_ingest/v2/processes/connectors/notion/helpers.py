@@ -23,7 +23,7 @@ from htmlBuilder.tags import (
 from notion_client.errors import APIResponseError
 
 import unstructured_ingest.v2.processes.connectors.notion.types.blocks as notion_blocks
-from unstructured_ingest.v2.processes.connectors.notion.client import Client
+from unstructured_ingest.v2.processes.connectors.notion.client import NotionClient as Client
 from unstructured_ingest.v2.processes.connectors.notion.interfaces import BlockBase
 from unstructured_ingest.v2.processes.connectors.notion.types.block import Block
 from unstructured_ingest.v2.processes.connectors.notion.types.database import Database
@@ -50,7 +50,7 @@ def extract_page_html(
 ) -> HtmlExtractionResponse:
     page_id_uuid = UUID(page_id)
     html_elements: List[Tuple[BlockBase, HtmlTag]] = []
-    parent_block: Block = client.blocks.retrieve(block_id=page_id)  # type: ignore
+    parent_block: Block = Block.from_dict(data=client.blocks.retrieve(block_id=page_id))  # type: ignore
     head = None
     if isinstance(parent_block.block, notion_blocks.ChildPage):
         head = Head([], Title([], parent_block.block.title))

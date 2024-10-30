@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from time import time
-from typing import Any, AsyncGenerator, Generator, Optional
+from typing import Any, AsyncGenerator, Generator, List, Optional
 
 from pydantic import UUID4, Field, Secret
 
@@ -34,11 +34,11 @@ class NotionConnectionConfig(ConnectionConfig):
 
 
 class NotionIndexerConfig(IndexerConfig):
-    page_ids: Optional[list[str]] = Field(
+    page_ids: Optional[List[str]] = Field(
         default=None, description="List of Notion page IDs to process"
     )
 
-    database_ids: Optional[list[str]] = Field(
+    database_ids: Optional[List[str]] = Field(
         default=None, description="List of Notion database IDs to process"
     )
     recursive: bool = Field(
@@ -47,10 +47,10 @@ class NotionIndexerConfig(IndexerConfig):
 
     def __post_init__(self):
         if self.page_ids:
-            self.page_ids: list[UUID4] = [UUID4(p.strip()) for p in self.page_ids]
+            self.page_ids: List[UUID4] = [UUID4(p.strip()) for p in self.page_ids]
 
         if self.database_ids:
-            self.database_ids: list[UUID4] = [UUID4(p.strip()) for p in self.database_ids]
+            self.database_ids: List[UUID4] = [UUID4(p.strip()) for p in self.database_ids]
 
 
 @dataclass
@@ -67,7 +67,7 @@ class NotionIndexer(Indexer):
 
         return Client(
             notion_version=NOTION_API_VERSION,
-            auth=self.connection_config.notion_api_key.get_secret_value().notion_api_key,
+            auth=self.connection_config.access_config.get_secret_value().notion_api_key,
             logger=logger,
             log_level=logger.level,
         )
@@ -146,9 +146,9 @@ class NotionIndexer(Indexer):
     @requires_dependencies(["notion_client"], extras="notion")
     async def get_page_file_data(self, page_id: str, client: "get_client") -> Optional[FileData]:
         try:
-            page_metadata = await client.pages.retrieve(page_id=page_id)  # type: ignore
-            date_created = page_metadata.created_time
-            date_modified = page_metadata.last_edited_time
+            page_metadata = client.pages.retrieve(page_id=page_id)
+            date_created = page_metadata.get("created_time")
+            date_modified = page_metadata.get("last_edited_time")
             identifier = page_id
             source_identifiers = SourceIdentifiers(
                 filename=f"{page_id}.html",
@@ -257,8 +257,19 @@ class NotionDownloader(Downloader):
     download_config: NotionDownloaderConfig
     connector_type: str = CONNECTOR_TYPE
 
+    @requires_dependencies(["notion_client"], extras="notion")
+    def get_client(self) -> "get_client":
+        from unstructured_ingest.v2.processes.connectors.notion.client import NotionClient as Client
+
+        return Client(
+            notion_version=NOTION_API_VERSION,
+            auth=self.connection_config.access_config.get_secret_value().notion_api_key,
+            logger=logger,
+            log_level=logger.level,
+        )
+
     def run(self, file_data: FileData, **kwargs: Any) -> DownloadResponse:
-        client = self.connection_config.get_client()
+        client = self.get_client()
         record_locator = file_data.metadata.record_locator
 
         if "page_id" in record_locator:

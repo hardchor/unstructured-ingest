@@ -1,4 +1,4 @@
-from typing import Any, Generator
+from typing import Any, AsyncGenerator, List
 
 import httpx
 from notion_client import Client as NotionClient
@@ -17,7 +17,7 @@ class AsyncBlocksChildrenEndpoint(NotionBlocksChildrenEndpoint):
         super().__init__(*args, **kwargs)
         self._http_client = httpx.AsyncClient()
 
-    async def list(self, block_id: str, **kwargs: Any) -> tuple[list[Block], dict]:
+    async def list(self, block_id: str, **kwargs: Any) -> tuple[List[Block], dict]:
         """Fetch the list of child blocks asynchronously."""
         try:
             response = await self._http_client.get(
@@ -35,7 +35,7 @@ class AsyncBlocksChildrenEndpoint(NotionBlocksChildrenEndpoint):
 
     async def iterate_list(
         self, block_id: str, **kwargs: Any
-    ) -> Generator[list[Block], None, None]:
+    ) -> AsyncGenerator[List[Block], None]:
         """Fetch the list of child blocks in pages asynchronously."""
         next_cursor = None
         while True:
@@ -72,7 +72,7 @@ class AsyncDatabasesEndpoint(NotionDatabasesEndpoint):
 
         return Database.from_dict(data=response.json())
 
-    async def query(self, database_id: str, **kwargs: Any) -> tuple[list[Page], dict]:
+    async def query(self, database_id: str, **kwargs: Any) -> tuple[List[Page], dict]:
         """Query a database asynchronously."""
         try:
             response = await self._http_client.post(

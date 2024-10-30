@@ -169,7 +169,10 @@ class Pipeline:
         failures = {}
         for step in steps:
             try:
-                step.process.precheck()
+                if step.process.is_async():
+                    asyncio.run(step.process.precheck())
+                else:
+                    step.process.precheck()
             except Exception as e:
                 failures[step.process.__class__.__name__] = f"[{type(e).__name__}] {e}"
         if failures:
@@ -186,10 +189,16 @@ class Pipeline:
         filtered_file_data_paths = [r["file_data_path"] for r in filtered_data]
         filtered_records = [r for r in records if r["file_data_path"] in filtered_file_data_paths]
         return filtered_records
+    
+    async def _collect_indices(self) -> list[dict]:
+        indices = []
+        async for index in self.indexer_step.run_async():
+            indices.append(index)
+        return indices
 
     def get_indices(self) -> list[dict]:
         if self.indexer_step.process.is_async():
-            indices = asyncio.run(self.indexer_step.run_async())
+            indices = asyncio.run(self._collect_indices())
         else:
             indices = self.indexer_step.run()
         indices_inputs = [{"file_data_path": i} for i in indices]
