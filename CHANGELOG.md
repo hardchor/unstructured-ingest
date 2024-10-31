@@ -161,7 +161,7 @@
 
 - **Model serialization with nested models** Logic updated to properly handle serializing pydantic models that have nested configs with secret values.
 - **Sharepoint permission config requirement** The sharepoint connector was expecting the permission config, even though it should have been optional.
-- \*\*Sharepoint CLI permission params made optional
+- **Sharepoint CLI permission params made optional**
 
 ### Enhancements
 
@@ -212,7 +212,7 @@
 - **Chroma dict settings should allow string inputs**
 - **Move opensearch non-secret fields out of access config**
 - **Support string inputs for dict type model fields** Use the `BeforeValidator` support from pydantic to map a string value to a dict if that's provided.
-- \*\*Move opensearch non-secret fields out of access config
+- **Move opensearch non-secret fields out of access config**
 
 ### Fixes
 
