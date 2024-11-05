@@ -72,21 +72,29 @@ def process_block(
             html_elements.append((parent.block, build_columned_list_response.columned_list_html))
             continue
         if isinstance(parent.block, notion_blocks.BulletedListItem):
-            bullet_list_resp = build_bulleted_list_children(
-                client=client,
-                bulleted_list_item_parent=parent,
-            )
-            if bullet_list_children := bullet_list_resp.child_list:
-                html_elements.append((parent.block, bullet_list_children))
-            continue
+            if parent.id != str(block_id_uuid):
+                bullet_list_resp = build_bulleted_list_children(
+                    client=client,
+                    logger=logger,
+                    bulleted_list_item_parent=parent,
+                    level=level,
+                )
+                html_elements[-1] = (parent.block, bullet_list_resp.html)
+                continue
+            else:
+                html_elements.pop()
         if isinstance(parent.block, notion_blocks.NumberedListItem):
-            numbered_list_resp = build_numbered_list_children(
-                client=client,
-                numbered_list_item_parent=parent,
-            )
-            if numbered_list_children := numbered_list_resp.child_list:
-                html_elements.append((parent.block, numbered_list_children))
-            continue
+            if parent.id != str(block_id_uuid):
+                numbered_list_resp = build_numbered_list_children(
+                    client=client,
+                    logger=logger,
+                    numbered_list_item_parent=parent,
+                    level=level,
+                )
+                html_elements[-1] = (parent.block, numbered_list_resp.html)
+                continue
+            else:
+                html_elements.pop()
         if parent.has_children:
             if not parent.block.can_have_children():
                 # TODO: wrap in div?
@@ -105,8 +113,34 @@ def process_block(
                         parents.append((level + 1, child))
         processed_block_ids.append(parent.id)
 
+    # Join list items
+    joined_html_elements: List[Tuple[BlockBase, HtmlTag]] = []
+    numbered_list_items = []
+    bullet_list_items = []
+    type_attr_ind = (level + 1) % len(numbered_list_types)
+    list_style_ind = (level + 1) % len(bulleted_list_styles)
+    for block, html in html_elements:
+        if isinstance(block, notion_blocks.BulletedListItem):
+            bullet_list_items.append(html)
+            continue
+        if isinstance(block, notion_blocks.NumberedListItem):
+            numbered_list_items.append(html)
+            continue
+        if len(numbered_list_items) > 0:
+            html = Ol([Type(numbered_list_types[type_attr_ind])], numbered_list_items)
+            numbered_list_items = []
+        if len(bullet_list_items) > 0:
+            html = Ul([Type(bulleted_list_styles[list_style_ind])], bullet_list_items)
+            bullet_list_items = []
+        joined_html_elements.append((block, html))
+    
+    if len(numbered_list_items) > 0:
+        joined_html_elements.append((block, Ol([Type(numbered_list_types[type_attr_ind])], numbered_list_items)))
+    if len(bullet_list_items) > 0:
+        joined_html_elements.append((block, Ul([Type(bulleted_list_styles[list_style_ind])], bullet_list_items)))
+
     return ProcessBlockResponse(
-        html_elements=html_elements,
+        html_elements=joined_html_elements,
         child_pages=child_pages,
         child_databases=child_databases,
     )
@@ -513,7 +547,6 @@ def build_columned_list(client: Client, logger: logging.Logger, column_parent: B
 @dataclass
 class BulletedListResponse:
     html: HtmlTag
-    child_list: Optional[HtmlTag] = None
 
 
 bulleted_list_styles = ["circle", "square", "disc"]
@@ -521,95 +554,67 @@ bulleted_list_styles = ["circle", "square", "disc"]
 
 def build_bulleted_list_children(
     client: Client,
+    logger: logging.Logger,
     bulleted_list_item_parent: Block,
-    list_style_ind: int = 0,
+    level: int = 0,
 ) -> BulletedListResponse:
     if not isinstance(bulleted_list_item_parent.block, notion_blocks.BulletedListItem):
         raise ValueError(
             f"block type not bulleted list item: {type(bulleted_list_item_parent.block)}",
         )
+    
     html = bulleted_list_item_parent.get_html()
     if html:
         html.attributes = [Style("margin-left: 10px")]
-    if not bulleted_list_item_parent.has_children:
-        return BulletedListResponse(
-            html=html,
-        )
-    children = []
-    for child_block in client.blocks.children.iterate_list(  # type: ignore
-        block_id=bulleted_list_item_parent.id,
-    ):
-        children.extend(child_block)
-    if not children:
-        return BulletedListResponse(
-            html=bulleted_list_item_parent.get_html(),
-        )
-    child_html = []
-    for child in children:
-        child_resp = build_bulleted_list_children(
-            client=client,
-            bulleted_list_item_parent=child,
-            list_style_ind=(list_style_ind + 1) % len(bulleted_list_styles),
-        )
-        child_html.append(child_resp.html)
-        if child_children := child_resp.child_list:
-            child_html.append(child_children)
 
+    if bulleted_list_item_parent.has_children:
+        block_response = process_block(
+            client=client,
+            logger=logger,
+            parent_block=bulleted_list_item_parent,
+            start_level=level + 1,
+        )
+        child_html = [html for block, html in block_response.html_elements]
+        html.inner_html.extend(child_html)
+    
     return BulletedListResponse(
         html=html,
-        child_list=Ul(
-            [Style(f"list-style-type: {bulleted_list_styles[list_style_ind]}")],
-            child_html,
-        ),
     )
 
 
 @dataclass
 class NumberedListResponse:
     html: HtmlTag
-    child_list: Optional[HtmlTag] = None
 
 
-numbered_list_types = ["a", "i", "1"]
+numbered_list_types = ["i", "a", "1"]
 
 
 def build_numbered_list_children(
     client: Client,
+    logger: logging.Logger,
     numbered_list_item_parent: Block,
-    type_attr_ind=0,
+    level: int = 0,
 ) -> NumberedListResponse:
     if not isinstance(numbered_list_item_parent.block, notion_blocks.NumberedListItem):
         raise ValueError(
             f"block type not numbered list item: {type(numbered_list_item_parent.block)}",
         )
+
     html = numbered_list_item_parent.get_html()
     if html:
         html.attributes = [Style("margin-left: 10px")]
-    if not numbered_list_item_parent.has_children:
-        return NumberedListResponse(
-            html=html,
-        )
-    children = []
-    for child_block in client.blocks.children.iterate_list(  # type: ignore
-        block_id=numbered_list_item_parent.id,
-    ):
-        children.extend(child_block)
-    if not children:
-        return NumberedListResponse(
-            html=numbered_list_item_parent.get_html(),
-        )
-    child_html = []
-    for child in children:
-        child_resp = build_numbered_list_children(
+
+    if numbered_list_item_parent.has_children:
+        block_response = process_block(
             client=client,
-            numbered_list_item_parent=child,
-            type_attr_ind=(type_attr_ind + 1) % len(numbered_list_types),
+            logger=logger,
+            parent_block=numbered_list_item_parent,
+            start_level=level + 1,
         )
-        child_html.append(child_resp.html)
-        if child_children := child_resp.child_list:
-            child_html.append(child_children)
+        child_html = [html for block, html in block_response.html_elements]
+        html.inner_html.extend(child_html)
 
     return NumberedListResponse(
         html=html,
-        child_list=Ol([Type(numbered_list_types[type_attr_ind])], child_html),
     )
