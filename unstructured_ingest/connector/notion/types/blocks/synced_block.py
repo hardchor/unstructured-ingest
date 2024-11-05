@@ -9,7 +9,7 @@ from unstructured_ingest.connector.notion.interfaces import BlockBase
 
 @dataclass
 class OriginalSyncedBlock(BlockBase):
-    synced_from: Optional[str] = None
+    synced_from: None = field(default=None)
     children: List[dict] = field(default_factory=list)
 
     @staticmethod
@@ -48,10 +48,10 @@ class SyncBlock(BlockBase):
 
     @classmethod
     def from_dict(cls, data: dict):
-        if "synced_from" in data:
+        if not data.get("synced_from"):
             return OriginalSyncedBlock.from_dict(data)
         else:
-            return DuplicateSyncedBlock.from_dict(data)
+            return DuplicateSyncedBlock.from_dict(data["synced_from"])
 
     def get_html(self) -> Optional[HtmlTag]:
         return None
