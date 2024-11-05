@@ -10,7 +10,6 @@ from unstructured_ingest.connector.notion.interfaces import BlockBase
 @dataclass
 class OriginalSyncedBlock(BlockBase):
     synced_from: None = field(default=None)
-    children: List[dict] = field(default_factory=list)
 
     @staticmethod
     def can_have_children() -> bool:
@@ -26,7 +25,7 @@ class OriginalSyncedBlock(BlockBase):
 
 @dataclass
 class DuplicateSyncedBlock(BlockBase):
-    type: str
+    type: str = "block_id"
     block_id: str
 
     @staticmethod
