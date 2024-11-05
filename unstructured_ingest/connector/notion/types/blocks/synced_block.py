@@ -1,6 +1,6 @@
 # https://developers.notion.com/reference/block#synced-block
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional, Literal
 
 from htmlBuilder.tags import HtmlTag
 
@@ -10,7 +10,6 @@ from unstructured_ingest.connector.notion.interfaces import BlockBase
 @dataclass
 class OriginalSyncedBlock(BlockBase):
     synced_from: None = field(default=None)
-    children: List[dict] = field(default_factory=list)
 
     @staticmethod
     def can_have_children() -> bool:
@@ -18,7 +17,7 @@ class OriginalSyncedBlock(BlockBase):
 
     @classmethod
     def from_dict(cls, data: dict):
-        return cls(children=data["children"])
+        return cls(**data)
 
     def get_html(self) -> Optional[HtmlTag]:
         return None
@@ -26,8 +25,8 @@ class OriginalSyncedBlock(BlockBase):
 
 @dataclass
 class DuplicateSyncedBlock(BlockBase):
-    type: str
     block_id: str
+    type: Literal["block_id"] = "block_id"
 
     @staticmethod
     def can_have_children() -> bool:
