@@ -25,6 +25,7 @@ class Page(FromJSONMixin):
     object: str = "page"
     icon: Optional[FileObject] = None
     cover: Optional[FileObject] = None
+    title: Optional[str] = dict
 
     @classmethod
     def from_dict(cls, data: dict):

@@ -198,6 +198,10 @@ def extract_database_html(
 ) -> HtmlExtractionResponse:
     logger.debug(f"processing database id: {database_id}")
     database: Database = client.databases.retrieve(database_id=database_id)  # type: ignore
+    head = None
+    if database.title and database.title[0]:
+        head = Head([], Title([], database.title[0].plain_text))
+
     property_keys = list(database.properties.keys())
     property_keys = sorted(property_keys)
     table_html_rows = []
@@ -226,9 +230,21 @@ def extract_database_html(
         )
 
     table_html = Table([], table_html_rows)
+    body_elements: List[HtmlTag] = [table_html]
+    if database.title and database.title[0]:
+        heading = notion_blocks.Heading.from_dict({"color": "black", "is_toggleable": False})
+        heading.rich_text = database.title
+        heading_html = heading.get_html()
+        if heading_html:
+            body_elements.insert(0, heading_html)
+    body = Body([], body_elements)
+    all_elements = [body]
+    if head:
+        all_elements = [head] + all_elements
+    full_html = Html([], all_elements)
 
     return HtmlExtractionResponse(
-        html=table_html,
+        html=full_html,
         child_pages=child_pages,
         child_databases=child_databases,
     )
