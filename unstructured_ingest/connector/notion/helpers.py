@@ -1,7 +1,7 @@
 import enum
 import logging
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -26,6 +26,7 @@ import unstructured_ingest.connector.notion.types.blocks as notion_blocks
 from unstructured_ingest.connector.notion.client import Client
 from unstructured_ingest.connector.notion.interfaces import BlockBase
 from unstructured_ingest.connector.notion.types.block import Block
+from unstructured_ingest.connector.notion.types.page import Page
 from unstructured_ingest.connector.notion.types.database import Database
 
 
@@ -205,15 +206,15 @@ def extract_database_html(
     # Create header row
     table_html_rows.append(Tr([], [Th([], k) for k in property_keys]))
 
-    all_pages = []
+    pages_or_databases: List[Union[Page, Database]] = []
     for page_chunk in client.databases.iterate_query(database_id=database_id):  # type: ignore
-        all_pages.extend(page_chunk)
+        pages_or_databases.extend(page_chunk)
 
-    logger.debug(f"creating {len(all_pages)} rows")
-    for page in all_pages:
-        if is_database_url(client=client, url=page.url):
+    logger.debug(f"creating {len(pages_or_databases)} rows")
+    for page in pages_or_databases:
+        if isinstance(page, Database):
             child_databases.append(page.id)
-        if is_page_url(client=client, url=page.url):
+        if isinstance(page, Page):
             child_pages.append(page.id)
         properties = page.properties
         inner_html = [properties.get(k).get_html() for k in property_keys]  # type: ignore
@@ -367,7 +368,7 @@ def get_recursive_content(
 
         elif parent.type == QueueEntryType.DATABASE:
             logger.debug(f"getting child data from database: {parent.id}")
-            database_pages = []
+            database_pages: List[Union[Page, Database]] = []
             try:
                 for page_entries in client.databases.iterate_query(  # type: ignore
                     database_id=str(parent.id),
@@ -382,7 +383,7 @@ def get_recursive_content(
                 continue
 
             child_pages_from_db = [
-                p for p in database_pages if is_page_url(client=client, url=p.url)
+                p for p in database_pages if isinstance(p, Page)
             ]
             if child_pages_from_db:
                 logger.debug(
@@ -398,7 +399,7 @@ def get_recursive_content(
             )
 
             child_dbs_from_db = [
-                p for p in database_pages if is_database_url(client=client, url=p.url)
+                p for p in database_pages if isinstance(p, Database)
             ]
             if child_dbs_from_db:
                 logger.debug(
