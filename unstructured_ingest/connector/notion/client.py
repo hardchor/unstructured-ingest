@@ -1,4 +1,4 @@
-from typing import Any, Generator, List, Optional, Tuple
+from typing import Any, Generator, List, Optional, Tuple, Union
 
 import notion_client.errors
 from notion_client import Client as NotionClient
@@ -8,6 +8,7 @@ from notion_client.api_endpoints import DatabasesEndpoint as NotionDatabasesEndp
 from notion_client.api_endpoints import Endpoint
 from notion_client.api_endpoints import PagesEndpoint as NotionPagesEndpoint
 from notion_client.errors import RequestTimeoutError
+from notion_client.helpers import is_full_page, is_full_database
 
 from unstructured_ingest.connector.notion.types.block import Block
 from unstructured_ingest.connector.notion.types.database import Database
@@ -149,7 +150,7 @@ class DatabasesEndpoint(NotionDatabasesEndpoint):
             p.properties = map_cells(p.properties)
         return pages, resp
 
-    def iterate_query(self, database_id: str, **kwargs: Any) -> Generator[List[Page], None, None]:
+    def iterate_query(self, database_id: str, **kwargs: Any) -> Generator[List[Union[Page, Database]], None, None]:
         next_cursor = None
         while True:
             response: dict = (
@@ -157,10 +158,17 @@ class DatabasesEndpoint(NotionDatabasesEndpoint):
                 if (self.retry_handler)
                 else (super().query(database_id=database_id, start_cursor=next_cursor, **kwargs))
             )  # type: ignore
-            pages = [Page.from_dict(data=p) for p in response.pop("results", [])]
-            for p in pages:
-                p.properties = map_cells(p.properties)
-            yield pages
+            pages_or_databases: List[Union[Page, Database]] = []
+            for p in response.pop("results", []):
+                if is_full_page(p):
+                    page = Page.from_dict(data=p)
+                    page.properties = map_cells(page.properties)
+                    pages_or_databases.append(page)
+                elif is_full_database(p):
+                    database = Database.from_dict(data=p)
+                    database.properties = map_cells(database.properties)
+                    pages_or_databases.append(database)
+            yield pages_or_databases
 
             next_cursor = response.get("next_cursor")
             if not response.get("has_more") or not next_cursor:
