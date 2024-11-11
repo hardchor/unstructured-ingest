@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from htmlBuilder.tags import HtmlTag, Td, Th, Tr
+from htmlBuilder.tags import HtmlTag, Td, Th, Thead, Tr
 
 from unstructured_ingest.connector.notion.interfaces import (
     BlockBase,
@@ -60,4 +60,6 @@ class TableRow(BlockBase):
         return False
 
     def get_html(self) -> Optional[HtmlTag]:
+        if self.is_header:
+            return Thead([], [Tr([], [cell.get_html(is_header=self.is_header) for cell in self.cells])])
         return Tr([], [cell.get_html(is_header=self.is_header) for cell in self.cells])
