@@ -14,8 +14,10 @@ from htmlBuilder.tags import (
     HtmlTag,
     Ol,
     Table,
+    Tbody,
     Td,
     Th,
+    Thead,
     Title,
     Tr,
     Ul,
@@ -204,11 +206,12 @@ def extract_database_html(
 
     property_keys = list(database.properties.keys())
     property_keys = sorted(property_keys)
-    table_html_rows = []
+    table_header_rows: List[Tr] = []
+    table_body_rows: List[Tr] = []
     child_pages: List[str] = []
     child_databases: List[str] = []
     # Create header row
-    table_html_rows.append(Tr([], [Th([], k) for k in property_keys]))
+    table_header_rows.append(Tr([], [Th([], k) for k in property_keys]))
 
     pages_or_databases: List[Union[Page, Database]] = []
     for page_chunk in client.databases.iterate_query(database_id=database_id):  # type: ignore
@@ -222,14 +225,14 @@ def extract_database_html(
             child_pages.append(page.id)
         properties = page.properties
         inner_html = [properties.get(k).get_html() for k in property_keys]  # type: ignore
-        table_html_rows.append(
+        table_body_rows.append(
             Tr(
                 [],
                 [Td([], cell) for cell in [html if html else Div([], []) for html in inner_html]],
             ),
         )
 
-    table_html = Table([], table_html_rows)
+    table_html = Table([], [Thead([], table_header_rows)] + [Tbody([], table_body_rows)])
     body_elements: List[HtmlTag] = [table_html]
     if database.title and database.title[0]:
         heading = notion_blocks.Heading.from_dict({"color": "black", "is_toggleable": False})
