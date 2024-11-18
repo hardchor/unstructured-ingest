@@ -109,8 +109,8 @@ def process_block(
         joined_html_elements: List[HtmlElement] = []
         numbered_list_items = []
         bullet_list_items = []
-        type_attr_ind = (child_level + 1) % len(numbered_list_types)
-        list_style_ind = (child_level + 1) % len(bulleted_list_styles)
+        type_attr_ind = (start_level + 1) % len(numbered_list_types)
+        list_style_ind = (start_level + 1) % len(bulleted_list_styles)
         for block, html in children_html_elements:
             if isinstance(block, notion_blocks.BulletedListItem):
                 bullet_list_items.append(html)
