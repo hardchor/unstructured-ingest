@@ -40,7 +40,7 @@ class User(FromJSONMixin, GetHTMLMixin):
         if self.avatar_url:
             return A([Href(self.avatar_url)], self.name)
         else:
-            return Div([], self.name)
+            return Div([], self.name or [])
 
 
 @dataclass
