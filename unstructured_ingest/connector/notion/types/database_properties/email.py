@@ -11,6 +11,7 @@ from unstructured_ingest.connector.notion.interfaces import DBCellBase, DBProper
 class Email(DBPropertyBase):
     id: str
     name: str
+    description: Optional[str] = None
     type: str = "email"
     email: dict = field(default_factory=dict)
 

@@ -17,6 +17,7 @@ class StatusOption(FromJSONMixin):
     color: str
     id: str
     name: str
+    desription: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -28,6 +29,7 @@ class StatusGroup(FromJSONMixin):
     color: str
     id: str
     name: str
+    desription: Optional[str] = None
     option_ids: List[str] = field(default_factory=List[str])
 
     @classmethod
@@ -52,6 +54,7 @@ class StatusProp(FromJSONMixin):
 class Status(DBPropertyBase):
     id: str
     name: str
+    desription: Optional[str] = None
     status: StatusProp
     type: str = "status"
 
