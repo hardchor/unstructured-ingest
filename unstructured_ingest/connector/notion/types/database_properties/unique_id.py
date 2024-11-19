@@ -15,7 +15,7 @@ from unstructured_ingest.connector.notion.interfaces import (
 class UniqueID(DBPropertyBase):
     id: str
     name: str
-    desription: Optional[str] = None
+    description: Optional[str] = None
     type: str = "unique_id"
     unique_id: dict = field(default_factory=dict)
 
