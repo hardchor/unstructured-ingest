@@ -12,6 +12,7 @@ from unstructured_ingest.connector.notion.interfaces import DBCellBase, DBProper
 class URL(DBPropertyBase):
     id: str
     name: str
+    desription: Optional[str] = None
     type: str = "url"
     url: dict = field(default_factory=dict)
 

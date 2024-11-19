@@ -12,6 +12,7 @@ from unstructured_ingest.connector.notion.interfaces import DBCellBase, DBProper
 class Checkbox(DBPropertyBase):
     id: str
     name: str
+    description: Optional[str] = None
     type: str = "checkbox"
     checkbox: dict = field(default_factory=dict)
 
@@ -25,6 +26,7 @@ class CheckboxCell(DBCellBase):
     id: str
     checkbox: bool
     name: Optional[str] = None
+    description: Optional[str] = None
     type: str = "checkbox"
 
     @classmethod

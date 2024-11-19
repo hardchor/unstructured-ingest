@@ -12,6 +12,7 @@ from unstructured_ingest.connector.notion.types.date import Date as DateType
 class Date(DBPropertyBase):
     id: str
     name: str
+    description: Optional[str] = None
     type: str = "date"
     date: dict = field(default_factory=dict)
 

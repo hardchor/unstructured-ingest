@@ -28,6 +28,7 @@ class RollupProp(FromJSONMixin):
 class Rollup(DBPropertyBase):
     id: str
     name: str
+    desription: Optional[str] = None
     rollup: RollupProp
     type: str = "rollup"
 
