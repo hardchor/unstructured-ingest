@@ -37,8 +37,8 @@ class SelectProp(FromJSONMixin):
 class Select(DBPropertyBase):
     id: str
     name: str
+    desription: Optional[str] = None
     select: SelectProp
-    description: Optional[str] = None
     type: str = "select"
 
     @classmethod
