@@ -38,7 +38,7 @@ class Select(DBPropertyBase):
     id: str
     name: str
     select: SelectProp
-    desription: Optional[str] = None
+    description: Optional[str] = None
     type: str = "select"
 
     @classmethod

@@ -25,7 +25,7 @@ class Formula(DBPropertyBase):
     id: str
     name: str
     formula: FormulaProp
-    desription: Optional[str] = None
+    description: Optional[str] = None
     type: str = "formula"
 
     @classmethod
