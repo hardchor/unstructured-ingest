@@ -43,8 +43,8 @@ class RelationProp(FromJSONMixin):
 class Relation(DBPropertyBase):
     id: str
     name: str
-    desription: Optional[str] = None
     relation: RelationProp
+    desription: Optional[str] = None
     type: str = "relation"
 
     @classmethod

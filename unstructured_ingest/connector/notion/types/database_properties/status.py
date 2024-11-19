@@ -54,8 +54,8 @@ class StatusProp(FromJSONMixin):
 class Status(DBPropertyBase):
     id: str
     name: str
-    desription: Optional[str] = None
     status: StatusProp
+    desription: Optional[str] = None
     type: str = "status"
 
     @classmethod

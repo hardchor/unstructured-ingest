@@ -24,8 +24,8 @@ class FormulaProp(FromJSONMixin):
 class Formula(DBPropertyBase):
     id: str
     name: str
-    desription: Optional[str] = None
     formula: FormulaProp
+    desription: Optional[str] = None
     type: str = "formula"
 
     @classmethod

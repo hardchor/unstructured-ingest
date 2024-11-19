@@ -24,8 +24,8 @@ class NumberProp(FromJSONMixin):
 class Number(DBPropertyBase):
     id: str
     name: str
-    desription: Optional[str] = None
     number: NumberProp
+    desription: Optional[str] = None
     type: str = "number"
 
     @classmethod
