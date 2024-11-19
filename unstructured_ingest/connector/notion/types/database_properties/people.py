@@ -12,7 +12,7 @@ from unstructured_ingest.connector.notion.types.user import People as PeopleType
 class People(DBPropertyBase):
     id: str
     name: str
-    desription: Optional[str] = None
+    description: Optional[str] = None
     type: str = "people"
     people: dict = field(default_factory=dict)
 

@@ -11,7 +11,7 @@ from unstructured_ingest.connector.notion.interfaces import DBCellBase, DBProper
 class PhoneNumber(DBPropertyBase):
     id: str
     name: str
-    desription: Optional[str] = None
+    description: Optional[str] = None
     type: str = "phone_number"
     phone_number: dict = field(default_factory=dict)
 

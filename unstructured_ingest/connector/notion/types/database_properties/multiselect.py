@@ -17,7 +17,7 @@ class MultiSelectOption(FromJSONMixin):
     color: str
     id: str
     name: str
-    desription: Optional[str] = None
+    description: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -38,7 +38,7 @@ class MultiSelect(DBPropertyBase):
     id: str
     name: str
     multi_select: MultiSelectProp
-    desription: Optional[str] = None
+    description: Optional[str] = None
     type: str = "multi_select"
 
     @classmethod
