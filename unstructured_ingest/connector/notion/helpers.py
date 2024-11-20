@@ -53,6 +53,14 @@ def process_block(
 
     parent_html = parent_block.get_html()
     if parent_block.has_children:
+        if isinstance(parent_block.block, notion_blocks.Unsupported):
+            logger.warning(f"Unsupported block type: {parent_block.block} has children - skipping")
+            return ProcessBlockResponse(
+                html_element=(parent_block.block, parent_html),
+                child_pages=child_pages,
+                child_databases=child_databases,
+            )
+
         if not parent_block.block.can_have_children():
             raise ValueError(f"Block type cannot have children: {type(parent_block.block)}")
 
@@ -217,6 +225,8 @@ def extract_database_html(
     for page in pages_or_databases:
         if isinstance(page, Database):
             child_databases.append(page.id)
+            # child database can't be rendered inline
+            continue
         if isinstance(page, Page):
             child_pages.append(page.id)
         properties = page.properties
