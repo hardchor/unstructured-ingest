@@ -166,7 +166,6 @@ class DatabasesEndpoint(NotionDatabasesEndpoint):
                     pages_or_databases.append(page)
                 elif is_full_database(p):
                     database = Database.from_dict(data=p)
-                    database.properties = map_cells(database.properties)
                     pages_or_databases.append(database)
             yield pages_or_databases
 

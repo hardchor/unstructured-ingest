@@ -217,6 +217,8 @@ def extract_database_html(
     for page in pages_or_databases:
         if isinstance(page, Database):
             child_databases.append(page.id)
+            # child database can't be rendered inline
+            continue
         if isinstance(page, Page):
             child_pages.append(page.id)
         properties = page.properties
