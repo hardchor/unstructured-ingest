@@ -23,20 +23,33 @@ class DualProperty(FromJSONMixin):
 
 
 @dataclass
+class SingleProperty(FromJSONMixin):
+    synced_property_id: Optional[str] = None
+    synced_property_name: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(**data)
+
+@dataclass
 class RelationProp(FromJSONMixin):
     database_id: str
     type: str
-    dual_property: DualProperty
+    dual_property: Optional[DualProperty] = None
+    single_property: Optional[SingleProperty] = None
 
     @classmethod
     def from_dict(cls, data: dict):
         t = data.get("type")
         if t == "dual_property":
             dual_property = DualProperty.from_dict(data.pop(t))
+            return cls(dual_property=dual_property, **data)
+        elif t == "single_property":
+            single_property = SingleProperty.from_dict(data.pop(t))
+            return cls(single_property=single_property, **data)
         else:
             raise ValueError(f"{t} type not recognized")
 
-        return cls(dual_property=dual_property, **data)
 
 
 @dataclass
