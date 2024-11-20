@@ -53,6 +53,14 @@ def process_block(
 
     parent_html = parent_block.get_html()
     if parent_block.has_children:
+        if isinstance(parent_block.block, notion_blocks.Unsupported):
+            logger.warning(f"Unsupported block type: {parent_block.block} has children - skipping")
+            return ProcessBlockResponse(
+                html_element=(parent_block.block, parent_html),
+                child_pages=child_pages,
+                child_databases=child_databases,
+            )
+
         if not parent_block.block.can_have_children():
             raise ValueError(f"Block type cannot have children: {type(parent_block.block)}")
 
