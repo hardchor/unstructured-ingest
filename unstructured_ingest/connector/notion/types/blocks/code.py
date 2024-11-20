@@ -1,5 +1,6 @@
 # https://developers.notion.com/reference/block#code
 from dataclasses import dataclass, field
+import html
 from typing import List, Optional
 
 from htmlBuilder.tags import Br, Div, HtmlTag
@@ -32,7 +33,12 @@ class Code(BlockBase):
     def get_html(self) -> Optional[HtmlTag]:
         texts = []
         if self.rich_text:
-            texts.append(HtmlCode([], [rt.get_html() for rt in self.rich_text]))
+            escaped_rich_text = []
+            for rt in self.rich_text:
+                if rt.type == "text":
+                    rt.plain_text = html.escape(rt.plain_text, quote=False)
+                escaped_rich_text.append(rt.get_html())
+            texts.append(HtmlCode([], escaped_rich_text))
         if self.caption:
             texts.append(Div([], [rt.get_html() for rt in self.caption]))
         if not texts:
