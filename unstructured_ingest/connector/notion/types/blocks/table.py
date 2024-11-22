@@ -34,8 +34,8 @@ class TableCell(FromJSONMixin):
     rich_texts: List[RichText]
 
     @classmethod
-    def from_dict(cls, data: dict):
-        return cls(rich_texts=[RichText.from_dict(rt) for rt in data.pop("rich_texts", [])])
+    def from_dict(cls, data: dict, client=None):
+        return cls(rich_texts=[RichText.from_dict(rt, client=client) for rt in data.pop("rich_texts", [])])
 
     def get_html(self, is_header: bool) -> Optional[HtmlTag]:
         if is_header:
@@ -51,9 +51,9 @@ class TableRow(BlockBase):
     cells: List[TableCell] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict, client=None):
         cells = data.get("cells", [])
-        return cls(cells=[TableCell.from_dict({"rich_texts": c}) for c in cells])
+        return cls(cells=[TableCell.from_dict({"rich_texts": c}, client=client) for c in cells])
 
     @staticmethod
     def can_have_children() -> bool:

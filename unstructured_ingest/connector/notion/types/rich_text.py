@@ -173,7 +173,7 @@ class RichText(FromJSONMixin, GetHTMLMixin):
         return text
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict, client=None):
         t = data["type"]
         rich_text = cls(
             annotations=Annotations.from_dict(data.pop("annotations")),
@@ -182,6 +182,12 @@ class RichText(FromJSONMixin, GetHTMLMixin):
         if t == "text":
             rich_text.text = Text.from_dict(data["text"])
         elif t == "mention":
+            if data["plain_text"] == "@Anonymous" and client:
+                user_id = data["mention"]["user"]["id"]
+                user = client.users.retrieve(user_id=user_id)
+                user.pop("request_id")
+                data["mention"]["user"] = user
+                rich_text.plain_text = f"@{user["name"]}"
             rich_text.mention = Mention.from_dict(data["mention"])
         elif t == "equation":
             rich_text.equation = Equation.from_dict(data["equation"])
