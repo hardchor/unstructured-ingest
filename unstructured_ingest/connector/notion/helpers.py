@@ -127,14 +127,12 @@ def process_block(
                 numbered_list_items.append(html)
                 continue
             elif len(numbered_list_items) > 0:
-                html = Ol([Type(numbered_list_types[type_attr_ind])], numbered_list_items)
+                joined_html_elements.append((block, Ol([Type(numbered_list_types[type_attr_ind])], numbered_list_items)))
                 numbered_list_items = []
-                joined_html_elements.append((block, html))
             elif len(bullet_list_items) > 0:
-                html = Ul([Type(bulleted_list_styles[list_style_ind])], bullet_list_items)
+                joined_html_elements.append((block, Ul([Type(bulleted_list_styles[list_style_ind])], bullet_list_items)))
                 bullet_list_items = []
-                joined_html_elements.append((block, html))
-            elif html:
+            if html:
                 joined_html_elements.append((block, html))
         
         if len(numbered_list_items) > 0:
