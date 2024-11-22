@@ -69,18 +69,25 @@ class Block(FromJSONMixin, GetHTMLMixin):
         return f"{self.__class__.__name__}(id={self.id}, type={self.type})"
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict, client=None):
         t = data["type"]
         block_data = data.pop(t)
         created_by = data.pop("created_by")
         last_edited_by = data.pop("last_edited_by")
         parent = data.pop("parent")
         try:
+            import inspect
+            from_dict_func = block_type_mapping[t].from_dict
+            params = inspect.signature(from_dict_func).parameters
+            if 'client' in params:
+                block_arg = from_dict_func(block_data, client=client)  # type: ignore
+            else:
+                block_arg = from_dict_func(block_data)  # type: ignore
             block = cls(
                 created_by=PartialUser.from_dict(created_by),
                 last_edited_by=PartialUser.from_dict(last_edited_by),
                 parent=Parent.from_dict(parent),
-                block=block_type_mapping[t].from_dict(block_data),  # type: ignore
+                block=block_arg,  # type: ignore
                 **data,
             )
         except KeyError as ke:
