@@ -32,12 +32,6 @@ class RichTextCell(DBCellBase):
 
     @classmethod
     def from_dict(cls, data: dict):
-        # remove "\n" from the text as this breaks chunking
-        for rt in data.get("rich_text", []):
-            if rt.get("type", "") == "text":
-                rt["text"]["content"] = rt["text"]["content"].replace("\n", "; ")
-            rt["plain_text"] = rt["plain_text"].replace("\n", "; ")
-
         return cls(
             rich_text=[RichTextType.from_dict(rt) for rt in data.pop("rich_text", [])],
             **data,
