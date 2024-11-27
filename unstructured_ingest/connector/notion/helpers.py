@@ -51,7 +51,7 @@ def process_block(
     child_databases: List[str] = []
     children: List[Tuple[int, Block]] = []
 
-    parent_html = parent_block.get_html()
+    parent_html = parent_block.get_html() or Div([], [])
     if parent_block.has_children:
         if isinstance(parent_block.block, notion_blocks.Unsupported):
             logger.warning(f"Unsupported block type: {parent_block.block} has children - skipping")
@@ -64,8 +64,6 @@ def process_block(
         if not parent_block.block.can_have_children():
             raise ValueError(f"Block type cannot have children: {type(parent_block.block)}")
 
-        parent_html = parent_html or Div([], [])
-
         for child_blocks in client.blocks.children.iterate_list(  # type: ignore
             block_id=parent_block.id,
         ):
@@ -73,16 +71,6 @@ def process_block(
                 children.append((start_level + 1, child_block))
         logger.debug(f"adding {len(children)} children from parent: {parent_block}")
         for child_level, child_block in children:
-            child_block_response = process_block(
-                client=client,
-                logger=logger,
-                parent_block=child_block,
-                start_level=child_level,
-            )
-            child_block_response_block, child_block_response_html = child_block_response.html_element
-
-            # children_html_elements.append(child_block_response.html_element)
-    
             logger.debug(f"processing child block: {child_block}")
             if isinstance(child_block.block, notion_blocks.ChildPage) and child_block.id != str(block_id_uuid):
                 child_pages.append(child_block.id)
@@ -102,7 +90,16 @@ def process_block(
                 child_databases.extend(build_columned_list_response.child_databases)
                 children_html_elements.append((child_block.block, build_columned_list_response.columned_list_html))
                 continue
-            elif isinstance(child_block.block, notion_blocks.BulletedListItem):
+
+            child_block_response = process_block(
+                client=client,
+                logger=logger,
+                parent_block=child_block,
+                start_level=child_level,
+            )
+            child_block_response_block, child_block_response_html = child_block_response.html_element
+            
+            if isinstance(child_block.block, notion_blocks.BulletedListItem):
                 bulleted_list_response = build_bulleted_list_item(html=child_block_response_html)
                 children_html_elements.append((child_block.block, bulleted_list_response.html))
             elif isinstance(child_block.block, notion_blocks.NumberedListItem):
@@ -201,8 +198,22 @@ def extract_database_html(
     logger: logging.Logger,
 ) -> HtmlExtractionResponse:
     logger.debug(f"processing database id: {database_id}")
-    database: Database = client.databases.retrieve(database_id=database_id)  # type: ignore
+
+    parent_block: Block = client.blocks.retrieve(block_id=database_id)  # type: ignore
     head = None
+    if isinstance(parent_block.block, notion_blocks.ChildDatabase):
+        head = Head([], Title([], parent_block.block.title))
+
+    process_block_response = process_block(
+        client=client,
+        logger=logger,
+        parent_block=parent_block,
+        start_level=0,
+    )
+    _, body_child_html = process_block_response.html_element
+
+
+    database: Database = client.databases.retrieve(database_id=database_id)  # type: ignore
     if database.title and database.title[0]:
         head = Head([], Title([], database.title[0].plain_text))
 
@@ -237,7 +248,7 @@ def extract_database_html(
         )
 
     table_html = Table([], [Thead([], table_header_rows)] + [Tbody([], table_body_rows)])
-    body_elements: List[HtmlTag] = [table_html]
+    body_elements: List[HtmlTag] = [body_child_html, table_html]
     if database.title and database.title[0]:
         heading = notion_blocks.Heading.from_dict({"color": "black", "is_toggleable": False})
         heading.rich_text = database.title
