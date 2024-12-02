@@ -1,6 +1,6 @@
 # https://developers.notion.com/reference/property-object#url
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 from htmlBuilder.tags import Div, HtmlTag, Span
 
@@ -11,7 +11,7 @@ from unstructured_ingest.connector.notion.interfaces import (
     GetHTMLMixin,
 )
 from unstructured_ingest.connector.notion.types.date import Date
-from unstructured_ingest.connector.notion.types.user import People
+from unstructured_ingest.connector.notion.types.user import PartialUser, People, Bots
 
 
 @dataclass
@@ -30,15 +30,25 @@ class Verification(DBPropertyBase):
 @dataclass
 class VerificationData(FromJSONMixin, GetHTMLMixin):
     state: Optional[str]
-    verified_by: Optional[People]
+    verified_by: Optional[Union[People, Bots, PartialUser]]
     date: Optional[Date]
 
     @classmethod
     def from_dict(cls, data: dict):
-        verified_by = data.pop("verified_by", None)
         date = data.pop("date", None)
+        verified_by = data.pop("verified_by", None)
+        if verified_by:
+            if verified_by.get("type") == "person":
+                last_everified_byited_by=People.from_dict(verified_by)
+            elif verified_by.get("type") == "bot":
+                verified_by=Bots.from_dict(verified_by)
+            elif verified_by.get("object") == "user":
+                verified_by=PartialUser.from_dict(verified_by)
+            else:
+                raise ValueError(f"Invalid verified_by type {verified_by.get('type')}")
+        
         return cls(
-            verified_by=People.from_dict(data=verified_by) if verified_by else None,
+            verified_by=verified_by if verified_by else None,
             date=Date.from_dict(data=date) if date else None,
             **data,
         )
