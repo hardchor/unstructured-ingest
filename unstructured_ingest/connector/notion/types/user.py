@@ -1,6 +1,6 @@
 # https://developers.notion.com/reference/user
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Dict, Optional
 
 from htmlBuilder.attributes import Href
 from htmlBuilder.tags import A, Div, HtmlTag
@@ -9,13 +9,16 @@ from unstructured_ingest.connector.notion.interfaces import FromJSONMixin, GetHT
 
 
 @dataclass
-class PartialUser(FromJSONMixin):
+class PartialUser(FromJSONMixin, GetHTMLMixin):
     id: str
     object: str = "user"
 
     @classmethod
     def from_dict(cls, data: dict):
         return cls(id=data["id"])
+    
+    def get_html(self) -> Optional[HtmlTag]:
+        return None
 
 
 @dataclass
@@ -49,19 +52,14 @@ class People(User):
 
 
 @dataclass
-class Bots(FromJSONMixin, GetHTMLMixin):
-    object: dict
-    id: str
-    bot: dict
-    owner: dict
-    type: str
-    workspace_name: str
-    name: Optional[str] = None
-    avatar_url: Optional[str] = None
+class Bots(User):
+    owner: Optional[Dict] = None
+    workspace_name: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: dict):
-        return cls(**data)
+        bot = data.pop("bot", {})
+        return cls(**data, **bot)
 
     def get_text(self) -> Optional[str]:
         text = self.name
