@@ -210,12 +210,12 @@ def extract_page_html(
         head = Head([], Title([], parent_block.block.title))
 
     if isinstance(parent_block.parent, DatabaseParent):
-        pages, _ = client.databases.query(database_id=parent_block.parent.database_id, filter={"property": "title", "title": {"equals": "Z1Pro"}})  # type: ignore
+        pages, _ = client.databases.query(database_id=parent_block.parent.database_id, filter={"property": "title", "title": {"equals": parent_block.block.title}})  # type: ignore
         assert len(pages) == 1
         page = pages[0]
 
         table_html = get_table_html(
-            pages_or_databases=pages,
+            pages_or_databases=[page],
             properties=page.properties,
             logger=logger,
         )
