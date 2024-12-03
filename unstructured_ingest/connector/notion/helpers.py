@@ -1,7 +1,7 @@
 import enum
 import logging
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -30,8 +30,10 @@ from unstructured_ingest.connector.notion.interfaces import BlockBase
 from unstructured_ingest.connector.notion.types.block import Block
 from unstructured_ingest.connector.notion.types.page import Page
 from unstructured_ingest.connector.notion.types.database import Database
+from unstructured_ingest.connector.notion.types.parent import DatabaseParent
 
 HtmlElement = Tuple[BlockBase, HtmlTag]
+
 
 @dataclass
 class ProcessBlockResponse:
@@ -39,12 +41,13 @@ class ProcessBlockResponse:
     child_pages: List[str] = field(default_factory=list)
     child_databases: List[str] = field(default_factory=list)
 
+
 def process_block(
     client: Client,
     logger: logging.Logger,
     parent_block: Block,
     start_level: int = 0,
- ) -> ProcessBlockResponse:
+) -> ProcessBlockResponse:
     block_id_uuid = UUID(parent_block.id)
     children_html_elements: List[HtmlElement] = []
     child_pages: List[str] = []
@@ -98,7 +101,7 @@ def process_block(
                 start_level=child_level,
             )
             child_block_response_block, child_block_response_html = child_block_response.html_element
-            
+
             if isinstance(child_block.block, notion_blocks.BulletedListItem):
                 bulleted_list_response = build_bulleted_list_item(html=child_block_response_html)
                 children_html_elements.append((child_block.block, bulleted_list_response.html))
@@ -131,21 +134,19 @@ def process_block(
                 bullet_list_items = []
             if html:
                 joined_html_elements.append((block, html))
-        
+
         if len(numbered_list_items) > 0:
             joined_html_elements.append((block, Ol([Type(numbered_list_types[type_attr_ind])], numbered_list_items)))
         if len(bullet_list_items) > 0:
             joined_html_elements.append((block, Ul([Type(bulleted_list_styles[list_style_ind])], bullet_list_items)))
 
         parent_html.inner_html.extend([html for block, html in joined_html_elements])
-        
 
     return ProcessBlockResponse(
         html_element=(parent_block.block, parent_html),
         child_pages=child_pages,
         child_databases=child_databases,
     )
-
 
 
 @dataclass
@@ -162,6 +163,41 @@ class HtmlExtractionResponse:
     child_databases: List[str] = field(default_factory=list)
 
 
+def get_table_html(
+    pages_or_databases: List[Union[Page, Database]],
+    properties: Dict[str, Any],
+    logger: logging.Logger,
+) -> Table:
+    property_keys = list(properties.keys())
+    property_keys = sorted(property_keys)
+
+    # Find the property key with id 'title' and move it to the front
+    title_key = next((key for key in property_keys if (getattr(properties[key], "id", None)) == "title"), None)
+    if title_key:
+        property_keys.remove(title_key)
+        property_keys.insert(0, title_key)
+
+    table_header_rows: List[Tr] = []
+    table_body_rows: List[Tr] = []
+    # Create header row
+    table_header_rows.append(Tr([], [Th([], k) for k in property_keys]))
+
+    logger.debug(f"creating {len(pages_or_databases)} rows")
+    for page in pages_or_databases:
+        if isinstance(page, Database):
+            continue
+        properties = page.properties
+        inner_html = [properties.get(k).get_html() for k in property_keys]  # type: ignore
+        table_body_rows.append(
+            Tr(
+                [],
+                [Td([], cell) for cell in [html if html else Div([], []) for html in inner_html]],
+            ),
+        )
+
+    return Table([], [Thead([], table_header_rows)] + [Tbody([], table_body_rows)])
+
+
 def extract_page_html(
     client: Client,
     page_id: str,
@@ -169,8 +205,21 @@ def extract_page_html(
 ) -> HtmlExtractionResponse:
     parent_block: Block = client.blocks.retrieve(block_id=page_id)  # type: ignore
     head = None
+    body_elements: List[HtmlTag] = []
     if isinstance(parent_block.block, notion_blocks.ChildPage):
         head = Head([], Title([], parent_block.block.title))
+
+    if isinstance(parent_block.parent, DatabaseParent):
+        pages, _ = client.databases.query(database_id=parent_block.parent.database_id, filter={"property": "title", "title": {"equals": "Z1Pro"}})  # type: ignore
+        assert len(pages) == 1
+        page = pages[0]
+
+        table_html = get_table_html(
+            pages_or_databases=pages,
+            properties=page.properties,
+            logger=logger,
+        )
+        body_elements.append(table_html)
 
     process_block_response = process_block(
         client=client,
@@ -179,7 +228,8 @@ def extract_page_html(
         start_level=0,
     )
     _, body_child_html = process_block_response.html_element
-    body = Body([], [body_child_html])
+    body_elements.append(body_child_html)
+    body = Body([], body_elements)
     all_elements = [body]
     if head:
         all_elements = [head] + all_elements
@@ -212,42 +262,27 @@ def extract_database_html(
     )
     _, body_child_html = process_block_response.html_element
 
-
     database: Database = client.databases.retrieve(database_id=database_id)  # type: ignore
     if database.title and database.title[0]:
         head = Head([], Title([], database.title[0].plain_text))
-
-    property_keys = list(database.properties.keys())
-    property_keys = sorted(property_keys)
-    table_header_rows: List[Tr] = []
-    table_body_rows: List[Tr] = []
-    child_pages: List[str] = []
-    child_databases: List[str] = []
-    # Create header row
-    table_header_rows.append(Tr([], [Th([], k) for k in property_keys]))
 
     pages_or_databases: List[Union[Page, Database]] = []
     for page_chunk in client.databases.iterate_query(database_id=database_id):  # type: ignore
         pages_or_databases.extend(page_chunk)
 
-    logger.debug(f"creating {len(pages_or_databases)} rows")
+    child_pages: List[str] = []
+    child_databases: List[str] = []
     for page in pages_or_databases:
         if isinstance(page, Database):
             child_databases.append(page.id)
-            # child database can't be rendered inline
-            continue
         if isinstance(page, Page):
             child_pages.append(page.id)
-        properties = page.properties
-        inner_html = [properties.get(k).get_html() for k in property_keys]  # type: ignore
-        table_body_rows.append(
-            Tr(
-                [],
-                [Td([], cell) for cell in [html if html else Div([], []) for html in inner_html]],
-            ),
-        )
 
-    table_html = Table([], [Thead([], table_header_rows)] + [Tbody([], table_body_rows)])
+    table_html = get_table_html(
+        pages_or_databases=pages_or_databases,
+        properties=database.properties,
+        logger=logger,
+    )
     body_elements: List[HtmlTag] = [body_child_html, table_html]
     if database.title and database.title[0]:
         heading = notion_blocks.Heading.from_dict({"color": "black", "is_toggleable": False})
@@ -338,14 +373,10 @@ def get_recursive_content(
                 continue
 
             # Extract child pages
-            child_pages_from_page = [
-                c for c in page_children if isinstance(c.block, notion_blocks.ChildPage)
-            ]
+            child_pages_from_page = [c for c in page_children if isinstance(c.block, notion_blocks.ChildPage)]
             if child_pages_from_page:
                 child_page_blocks: List[notion_blocks.ChildPage] = [
-                    p.block
-                    for p in child_pages_from_page
-                    if isinstance(p.block, notion_blocks.ChildPage)
+                    p.block for p in child_pages_from_page if isinstance(p.block, notion_blocks.ChildPage)
                 ]
                 logger.debug(
                     "found child pages from parent page {}: {}".format(
@@ -361,14 +392,10 @@ def get_recursive_content(
             )
 
             # Extract child databases
-            child_dbs_from_page = [
-                c for c in page_children if isinstance(c.block, notion_blocks.ChildDatabase)
-            ]
+            child_dbs_from_page = [c for c in page_children if isinstance(c.block, notion_blocks.ChildDatabase)]
             if child_dbs_from_page:
                 child_db_blocks: List[notion_blocks.ChildDatabase] = [
-                    c.block
-                    for c in page_children
-                    if isinstance(c.block, notion_blocks.ChildDatabase)
+                    c.block for c in page_children if isinstance(c.block, notion_blocks.ChildDatabase)
                 ]
                 logger.debug(
                     "found child database from parent page {}: {}".format(
@@ -383,18 +410,12 @@ def get_recursive_content(
                 [QueueEntry(type=QueueEntryType.DATABASE, id=UUID(i)) for i in new_dbs],
             )
 
-            linked_to_others: List[notion_blocks.LinkToPage] = [
-                c.block for c in page_children if isinstance(c.block, notion_blocks.LinkToPage)
-            ]
+            linked_to_others: List[notion_blocks.LinkToPage] = [c.block for c in page_children if isinstance(c.block, notion_blocks.LinkToPage)]
             for link in linked_to_others:
-                if (page_id := link.page_id) and (
-                    page_id not in processed and page_id not in child_pages
-                ):
+                if (page_id := link.page_id) and (page_id not in processed and page_id not in child_pages):
                     child_pages.append(page_id)
                     parents.append(QueueEntry(type=QueueEntryType.PAGE, id=UUID(page_id)))
-                if (database_id := link.database_id) and (
-                    database_id not in processed and database_id not in child_dbs
-                ):
+                if (database_id := link.database_id) and (database_id not in processed and database_id not in child_dbs):
                     child_dbs.append(database_id)
                     parents.append(
                         QueueEntry(type=QueueEntryType.DATABASE, id=UUID(database_id)),
@@ -416,9 +437,7 @@ def get_recursive_content(
             if not database_pages:
                 continue
 
-            child_pages_from_db = [
-                p for p in database_pages if isinstance(p, Page)
-            ]
+            child_pages_from_db = [p for p in database_pages if isinstance(p, Page)]
             if child_pages_from_db:
                 logger.debug(
                     "found child pages from parent database {}: {}".format(
@@ -432,9 +451,7 @@ def get_recursive_content(
                 [QueueEntry(type=QueueEntryType.PAGE, id=UUID(i)) for i in new_pages],
             )
 
-            child_dbs_from_db = [
-                p for p in database_pages if isinstance(p, Database)
-            ]
+            child_dbs_from_db = [p for p in database_pages if isinstance(p, Database)]
             if child_dbs_from_db:
                 logger.debug(
                     "found child database from parent database {}: {}".format(
@@ -538,6 +555,7 @@ def build_table(client: Client, table: Block) -> BuildTableResponse:
         child_pages=child_pages,
         child_databases=child_databases,
     )
+
 
 @dataclass
 class BuildColumnedListResponse:
