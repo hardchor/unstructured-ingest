@@ -136,20 +136,26 @@ class DatabasesEndpoint(NotionDatabasesEndpoint):
         except httpx.TimeoutException:
             raise RequestTimeoutError()
 
-    def query(self, database_id: str, **kwargs: Any) -> Tuple[List[Page], dict]:
+    def query(self, database_id: str, **kwargs: Any) -> Tuple[List[Union[Page, Database]], dict]:
         """Get a list of [Pages](https://developers.notion.com/reference/page) contained in the database.
 
         *[🔗 Endpoint documentation](https://developers.notion.com/reference/post-database-query)*
         """  # noqa: E501
-        resp: dict = (
+        response: dict = (
             self.retry_handler(super().query, database_id=database_id, **kwargs)
             if (self.retry_handler)
             else (super().query(database_id=database_id, **kwargs))
         )  # type: ignore
-        pages = [Page.from_dict(data=p) for p in resp.pop("results")]
-        for p in pages:
-            p.properties = map_cells(p.properties)
-        return pages, resp
+        pages_or_databases: List[Union[Page, Database]] = []
+        for p in response.pop("results", []):
+            if is_full_page(p):
+                page = Page.from_dict(data=p)
+                page.properties = map_cells(page.properties)
+                pages_or_databases.append(page)
+            elif is_full_database(p):
+                database = Database.from_dict(data=p)
+                pages_or_databases.append(database)
+        return pages_or_databases, response
 
     def iterate_query(self, database_id: str, **kwargs: Any) -> Generator[List[Union[Page, Database]], None, None]:
         next_cursor = None
