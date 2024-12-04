@@ -211,15 +211,17 @@ def extract_page_html(
 
     if isinstance(parent_block.parent, DatabaseParent):
         pages, _ = client.databases.query(database_id=parent_block.parent.database_id, filter={"property": "title", "title": {"equals": parent_block.block.title}})  # type: ignore
-        assert len(pages) == 1
-        page = pages[0]
+        if len(pages) == 1:
+            page = pages[0]
 
-        table_html = get_table_html(
-            pages_or_databases=[page],
-            properties=page.properties,
-            logger=logger,
-        )
-        body_elements.append(table_html)
+            table_html = get_table_html(
+                pages_or_databases=[page],
+                properties=page.properties,
+                logger=logger,
+            )
+            body_elements.append(table_html)
+        else:
+            logger.warning(f"failed to find page with title: {parent_block.block}")
 
     process_block_response = process_block(
         client=client,
